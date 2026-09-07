@@ -1,371 +1,266 @@
-<img src="logo.png" alt="Mupi Systems Logo" width="200"/>
+<p align="center">
+  <img src="public/images/EscudoFLU.png" alt="Fluminense F.C." width="90">
+</p>
+
+<h1 align="center">Fluminense F.C. — Sistema de Sócio-Torcedor</h1>
+
+<p align="center">
+  Sistema web para cadastro de sócio-torcedor do Fluminense Football Club, desenvolvido como teste técnico para vaga de estágio na Mupi Systems.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/PHP-8.2-777BB4?style=flat&logo=php&logoColor=white" alt="PHP 8.2">
+  <img src="https://img.shields.io/badge/Laravel-12-FF2D20?style=flat&logo=laravel&logoColor=white" alt="Laravel 12">
+  <img src="https://img.shields.io/badge/Node.js-24-339933?style=flat&logo=node.js&logoColor=white" alt="Node.js 24">
+  <img src="https://img.shields.io/badge/Composer-2.10-885630?style=flat&logo=composer&logoColor=white" alt="Composer 2.10">
+  <img src="https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?style=flat&logo=tailwindcss&logoColor=white" alt="Tailwind CSS">
+  <img src="https://img.shields.io/badge/SQLite-3-003B57?style=flat&logo=sqlite&logoColor=white" alt="SQLite">
+  <img src="https://img.shields.io/badge/Alpine.js-3-8BC0D0?style=flat&logo=alpine.js&logoColor=white" alt="Alpine.js">
+</p>
+
+---
+
+## Sumário
+
+- [Sobre o projeto](#sobre-o-projeto)
+- [Funcionalidades](#funcionalidades)
+- [Stack utilizada](#stack-utilizada)
+- [Estrutura do projeto](#estrutura-do-projeto)
+- [Pré-requisitos](#pré-requisitos)
+- [Como rodar o projeto localmente](#como-rodar-o-projeto-localmente)
+- [Enviando e-mails de verdade (SMTP)](#enviando-e-mails-de-verdade-smtp)
+- [Estrutura do cadastro de sócio](#estrutura-do-cadastro-de-sócio)
+- [Idiomas](#idiomas)
+
+---
+
+## Sobre o projeto
+
+O sistema tem duas partes:
+
+- 🌐 **Página pública**: qualquer visitante pode conhecer os planos de sócio-torcedor disponíveis e se cadastrar preenchendo um formulário. O cadastro é salvo com status `pendente`.
+- 🔐 **Painel administrativo**: área protegida por login, onde o administrador visualiza todos os cadastros recebidos, aceita ou rejeita cada um, acompanha estatísticas em gráficos, e gerencia os planos e setores disponíveis no formulário público.
+
+---
+
+## Funcionalidades
+
+### ✅ Requisitos principais
+- Página pública com informações do programa de sócio-torcedor e formulário de cadastro
+- Cadastro salvo automaticamente com status `pendente`
+- Confirmação visual ao enviar o formulário
+- Usuário não autenticado é redirecionado ao tentar acessar o painel
+- Login do administrador com credenciais válidas
+- Painel lista todos os cadastros, ordenados por data, com indicação visual de status
+- Logout funcional
+
+### Além do mínimo
+- **Tema claro/escuro**, com preferência salva no navegador
+- **Tradução completa** da interface em Português e Inglês (incluindo mensagens de validação)
+- **Ordenação clicável** em qualquer coluna da tabela do painel
+- **Aceitar/rejeitar cadastros** diretamente no painel, com notificação automática por email ao sócio
+- **Notificação por email real**: suporte a envio via SMTP (Gmail) documentado abaixo, além do driver `log` padrão para ambiente de desenvolvimento sem depender de credenciais externas
+- **Gráficos interativos** (sócios confirmados por plano e por setor), com efeito de destaque ao passar o mouse
+- **Gerenciamento de Planos e Setores pelo admin**: criar, editar, ativar/desativar planos (com benefícios e opção de destaque "Mais popular") e setores do estádio — mudanças refletem automaticamente na página pública
+- **Prevenção de cadastro duplicado** por email
+- **Identidade visual própria**, com paleta e tipografia inspiradas no clube, fundo animado com padrão de escudos, e layout responsivo (desktop e mobile)
+- **Segurança**: proteção anti-spam (honeypot), limite de tentativas de envio do formulário público (rate limiting), remoção da rota pública de registro (evitando criação não autorizada de contas administrativas), e cabeçalhos HTTP de segurança (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`)
+
+> Mais detalhes e o raciocínio por trás de cada decisão estão em [`DECISOES.md`](./DECISOES.md).
+
+---
+
+## Stack utilizada
+
+| Camada | Tecnologia |
+|---|---|
+| Backend | Laravel 12 (PHP 8.2) |
+| Banco de dados | SQLite (padrão do Laravel 11+, sem configuração externa) |
+| Autenticação | Laravel Breeze (Blade + Alpine.js) |
+| Frontend | Blade + Tailwind CSS + Chart.js |
+| Email | Laravel Mail (Markdown Mailables), driver `log` por padrão |
+
+---
+
+## Estrutura do projeto
+
+```
+projeto_estagio_2026_2/
+├── app/
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   ├── SocioController.php       # Página pública, cadastro, dashboard e gráficos
+│   │   │   ├── PlanoController.php       # CRUD de planos de sócio
+│   │   │   ├── SetorController.php       # CRUD de setores do estádio
+│   │   │   └── Auth/                     # Controllers de autenticação (Breeze)
+│   │   └── Middleware/
+│   │       ├── SetLocale.php             # Aplica o idioma (pt/en) salvo na sessão
+│   │       └── SecurityHeaders.php       # Cabeçalhos HTTP de segurança
+│   ├── Mail/
+│   │   └── SocioStatusMail.php           # Email de confirmação/rejeição de cadastro
+│   └── Models/
+│       ├── Socio.php
+│       ├── Plano.php                     # Com scope ativos() e accessor beneficios_lista
+│       ├── Setor.php
+│       └── User.php
+├── database/
+│   ├── migrations/                       # Estrutura das tabelas do banco
+│   └── seeders/                          # AdminSeeder, PlanoSeeder, SetorSeeder
+├── lang/
+│   ├── pt/                               # Mensagens de validação em português
+│   └── en/                               # Mensagens de validação em inglês
+├── resources/
+│   ├── css/app.css                       # Tailwind + animações customizadas
+│   ├── js/app.js                         # Tema, idioma, gráficos (Chart.js), interações
+│   ├── lang/en.json                      # Traduções dos textos da interface
+│   └── views/
+│       ├── socios/create.blade.php       # Página pública (cadastro de sócio)
+│       ├── dashboard.blade.php           # Painel admin (lista, gráficos, ações)
+│       ├── planos/index.blade.php        # Gerenciamento de planos
+│       ├── setores/index.blade.php       # Gerenciamento de setores
+│       ├── emails/socio-status.blade.php # Template do email enviado ao sócio
+│       └── layouts/                      # Layouts base (app, guest, navigation)
+├── routes/
+│   ├── web.php                           # Rotas da aplicação
+│   └── auth.php                          # Rotas de autenticação (Breeze)
+└── public/
+    └── images/EscudoFLU.png              # Escudo oficial do clube
+```
 
-# Desenvolvedor(a) Júnior Full Stack
+**Alguns pontos de arquitetura:**
 
-## Sobre o teste
+- Segue o padrão **MVC** padrão do Laravel: rotas → controllers → models/views.
+- Usa **route model binding** (ex: `Route::patch('/socios/{socio}/confirmar', ...)`), então os controllers recebem o model já resolvido pelo Laravel, sem precisar buscar manualmente por ID.
+- **Scopes locais no Eloquent** (`Plano::ativos()`, `Setor::ativos()`) encapsulam a regra "só mostrar itens ativos", evitando repetir `where('ativo', true)` em vários lugares.
+- **Accessor** `beneficios_lista` no model `Plano` transforma o texto salvo (um benefício por linha) num array pronto para a view, sem lógica de parsing espalhada pelo Blade.
 
-Bem-vindo(a) ao teste técnico para a vaga de Desenvolvedor(a) Júnior Full Stack na Mupi Systems!
+---
 
-### O que você vai construir?
+## Pré-requisitos
 
-Um sistema web com três partes:
+Antes de rodar o projeto, tenha instalado:
 
-1. **Uma página pública**: apresenta um negócio ou projeto de sua escolha e tem um formulário
-2. **Registros no banco**: o que chega pelo formulário é salvo com status "pendente"
-3. **Um painel de gestão**: onde o admin faz login, acompanha os registros que chegam e gerencia as opções que a página oferece
+| Ferramenta | Versão usada no desenvolvimento |
+|---|---|
+| PHP | 8.2.12 ou superior |
+| Composer | 2.10.3 ou superior |
+| Node.js | v24.14.1 ou superior (o `npm` já vem junto) |
 
-E sobre o quê? Isso é 100% seu. Agendamento numa barbearia, inscrição num curso, pedido de orçamento numa assistência técnica, reserva de mesa num restaurante, pedido de adoção numa ONG de animais... qualquer coisa em que alguém de fora envia uma solicitação e alguém de dentro gerencia o que chega.
+> Não é necessário instalar o Laravel separadamente — o framework já vem incluso nas dependências do projeto (`composer.json`) e é baixado automaticamente no passo `composer install` abaixo.
 
-Essa liberdade não é enfeite: criatividade é o nosso maior critério de avaliação. Tanto na forma de resolver o problema quanto nas escolhas que você faz pelo caminho.
+---
 
-Ao longo deste documento vamos chamar essa solicitação de "registro". No seu projeto, dê a ela o nome do seu tema: agendamento, inscrição, pedido, reserva, o que for.
+## Como rodar o projeto localmente
 
-### Como funciona?
+> Antes de começar, confirme que você tem PHP, Composer e Node.js instalados nas versões indicadas na seção [Pré-requisitos](#pré-requisitos) acima.
 
-**Visitante**: acessa a página pública, escolhe uma das opções oferecidas, preenche o formulário e envia. O registro é salvo no banco como "pendente".
+```bash
+# 1. Clone o repositório
+git clone https://github.com/SEU-USUARIO/projeto_estagio_2026_2.git
+cd projeto_estagio_2026_2
 
-**Administrador**: faz login no painel, encontra os registros ordenados por data, filtra, busca, confirma ou cancela cada um, e mantém a lista de opções que a página pública mostra.
+# 2. Instale as dependências PHP (isso baixa o Laravel e todas as bibliotecas)
+composer install
 
-### O que esperamos?
+# 3. Instale as dependências JavaScript
+npm install
 
-- Que funcione aquilo que você entregou
-- Código que você entende e consegue explicar
-- Decisões conscientes registradas, inclusive as decisões de não fazer algo
-- Pelo menos uma coisa que a gente não pediu (pode ser pequena!)
-- Interface com a cara do tema escolhido, responsiva e limpa
-- Testes automatizados nos fluxos centrais
-- README que faz o projeto rodar sem você por perto
+# 4. Copie o arquivo de ambiente e gere a chave da aplicação
+cp .env.example .env
+php artisan key:generate
 
-### E antes de tudo: não precisa estar completo
+# 5. Crie o arquivo do banco SQLite (se ainda não existir)
+touch database/database.sqlite
 
-Entrega parcial é entrega, e o raciocínio por trás dela pesa muito. Mas vale ser transparente: por ser uma vaga júnior, o piso aqui é mais alto do que seria num estágio. Se precisar cortar, corte pelas bordas e proteja o núcleo: formulário salvando, painel protegido funcionando, status mudando.
+# 6. Rode as migrations
+php artisan migrate
 
-Se em algum momento a lista abaixo parecer grande demais, leia a seção [E se não der tempo de fazer tudo?](#e-se-não-der-tempo-de-fazer-tudo) antes de desistir.
+# 7. Rode os seeders (cria o usuário admin, os planos e os setores padrão)
+php artisan db:seed
 
-## A stack é sua escolha
+# 8. Compile os assets de frontend
+npm run build
 
-Não vamos dizer qual tecnologia usar. Você decide, e essa decisão faz parte da avaliação.
+# 9. Suba o servidor
+php artisan serve
+```
 
-Laravel, Rails, Express, FastAPI, Next.js, Django, Spring, .NET, Go, Flask... tanto faz. Renderizado no servidor ou SPA, tanto faz. Postgres, MySQL, Mongo ou um SQLite num arquivo, tanto faz.
+Acesse **http://127.0.0.1:8000** para ver a página pública.
 
-### Um conselho antes de escolher
+> Durante o desenvolvimento, é mais prático rodar `npm run dev` num terminal separado em vez de `npm run build` — ele recompila o CSS/JS automaticamente a cada alteração.
 
-Escolha o que você já conhece. Este não é um teste de aprender stack nova do zero. Escolher algo desconhecido só para impressionar costuma dar errado, e aparece na conversa. Ferramenta que você domina vale mais que ferramenta da moda.
+### 🔑 Criar o usuário administrador
 
-### O que a escolha precisa entregar
+O usuário admin é criado automaticamente pelo `AdminSeeder` no passo 7 acima (`php artisan db:seed`), com as seguintes credenciais:
 
-Seja qual for a stack:
+- **Email**: `admin@fluminense.com`
+- **Senha**: `senha123`
 
-- Roda na máquina de outra pessoa seguindo só o seu README
-- Autenticação pronta é permitida (Auth.js, Supabase, Devise, Passport, a do seu framework...). O que não vale é não saber explicar o que ela faz
-- O sistema é desenvolvido por você, não montado num serviço pronto (Calendly, Google Forms...)
-- Repositório com histórico de commits
+Acesse **http://127.0.0.1:8000/login** para entrar no painel administrativo.
 
-No `DECISOES.md`, conte por que escolheu essa stack: o que você ganhou e o que perdeu com a escolha.
+> ⚠️ Não existe cadastro público de novos administradores — essa rota foi removida intencionalmente por segurança (veja `DECISOES.md`). Se precisar de outro usuário admin, crie via `php artisan tinker` ou adicione ao `AdminSeeder`.
 
-## Objetivos
+---
 
-- Desenvolver uma página pública com formulário funcional
-- Construir um painel de gestão protegido por login, com ações de verdade: mudar status, gerenciar opções
-- Demonstrar que você consegue ler uma especificação e traduzi-la em código
-- Mostrar capacidade de decidir sob ambiguidade e de organizar código
-- Criar uma interface responsiva e funcional, com os fluxos centrais cobertos por testes
+## Enviando e-mails de verdade (SMTP)
 
-## Instruções
+Por padrão (`MAIL_MAILER=log`), os e-mails da aplicação não são enviados de verdade — apenas gravados em `storage/logs/laravel.log`. Isso é suficiente para testar o fluxo, mas se você quiser *receber os e-mails de verdade* (por exemplo, para validar o template ou testar como se fosse produção), é possível configurar o envio via SMTP do Gmail.
 
-### Fork do repositório
+### 1. Gerar uma senha de app no Google
 
-1. Faça um fork deste repositório para sua conta pessoal do GitHub
-2. Trabalhe no seu próprio fork
+O Gmail não aceita mais a senha normal da conta para SMTP — é necessário gerar uma *senha de app* específica:
 
-### Implementação
+1. Acesse [myaccount.google.com/security](https://myaccount.google.com/security) e ative a *Verificação em duas etapas*, caso ainda não esteja ativa (é pré-requisito).
+2. Acesse [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
+3. Gere uma nova senha de app (ex: nomeie como "Laravel" ou "Projeto Sócio-Torcedor").
+4. Copie a senha gerada (16 caracteres).
 
-Desenvolva o projeto conforme os requisitos abaixo, no tema e na stack que você escolher.
+### 2. Configurar o .env
 
-### Submissão
+Substitua as variáveis `MAIL_*` do seu `.env` por:
 
-1. Após finalizar, abra um Pull Request do seu fork para o repositório original
-2. Na descrição do PR, inclua:
-   - O que você adicionou além do que foi pedido, e por quê
-   - O que você decidiu não fazer, e por quê
-   - Onde você teve dificuldade
-3. Aguarde o agendamento da reunião para avaliação do teste
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=seuemail@gmail.com
+MAIL_PASSWORD="senha-de-app-gerada"
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS="seuemail@gmail.com"
+MAIL_FROM_NAME="${APP_NAME}"
+```
 
-### Documentação
+> ⚠️ Use a *senha de app*, não a senha normal da sua conta Google. `MAIL_FROM_ADDRESS` deve ser o mesmo e-mail usado em `MAIL_USERNAME`.
 
-Dois arquivos no repositório:
+### 3. Limpar o cache de configuração
 
-| Arquivo | Conteúdo |
-|---------|----------|
-| `README.md` | Descrição do projeto, stack utilizada e passo a passo para rodar |
-| `DECISOES.md` | Suas decisões (incluindo tema e stack) e como você usou IA |
+Sempre que alterar o `.env`, limpe o cache de config para que as mudanças tenham efeito:
 
-O `DECISOES.md` pode ser curto. Uma página inteira já é mais do que precisamos. Queremos clareza, não volume.
+```bash
+php artisan config:clear
+```
 
-## Requisitos funcionais
+### 4. Testar
 
-Descritos por comportamento, não por tecnologia. Como implementar é com você.
+Cadastre um sócio ou aprove/rejeite um cadastro existente pelo dashboard — o e-mail deve chegar de verdade na caixa de entrada informada.
 
-### Dados
+> Para times/produção, o recomendado é usar um serviço dedicado de e-mail transacional (ex: [Mailtrap](https://mailtrap.io) para testes, ou [Amazon SES](https://aws.amazon.com/ses/)/[Postmark](https://postmarkapp.com)/[Resend](https://resend.com) para produção) em vez de uma conta pessoal do Gmail.
 
-Aqui a modelagem cresce um pouco em relação a um formulário simples: as opções que a página oferece também são dados, gerenciados pelo painel. Nada de lista fixa no código.
+---
 
-Uma opção precisa guardar:
+## Estrutura do cadastro de sócio
 
-| Campo | Observação |
-|-------|------------|
-| **título** | O nome da opção: o serviço, a turma, o tipo de pedido... |
-| **ativa** | Se aparece ou não na página pública e no formulário |
+| Campo | Descrição |
+|---|---|
+| Nome | Nome completo do torcedor |
+| Email | Email de contato (único por sócio) |
+| Plano | Selecionado entre os planos ativos cadastrados pelo admin |
+| Data | Data de início desejada da associação |
+| Setor | Selecionado entre os setores ativos cadastrados pelo admin |
+| Status | Pendente, Confirmado ou Cancelado (nasce sempre como Pendente) |
 
-Acrescente o que o seu tema pedir: preço, duração, vagas... Deixe pelo menos 3 opções cadastradas via seed.
+---
 
-Um registro precisa guardar:
+## Idiomas
 
-| Campo | Observação |
-|-------|------------|
-| **nome** | Nome de quem preencheu o formulário |
-| **email** | Email de quem preencheu |
-| **opção** | Referência à opção escolhida |
-| **data** | Uma data que faça sentido no seu tema: data do agendamento, do evento, da reserva, prazo desejado... |
-| **horário** | Se fizer sentido no tema. Se não tiver, troque por outro campo que o seu tema pedir |
-| **status** | Restrito a: `pendente`, `confirmado`, `cancelado`. Nasce sempre como `pendente` |
-| **criado_em** | Quando o registro foi criado |
-| **atualizado_em** | Quando o registro mudou pela última vez |
-
-Os nomes dos campos são seus: em português, em inglês, camelCase, o que a sua stack pedir. O que importa é a informação estar lá.
-
-### Comportamentos
-
-| # | O que precisa acontecer |
-|---|--------------------------|
-| 1 | Visitante acessa a página pública e vê informações do negócio/projeto e as opções ativas |
-| 2 | Visitante envia o formulário e o registro é persistido com status `pendente` |
-| 3 | Dados inválidos não entram no banco: validação no frontend e no backend, com mensagens claras |
-| 4 | Visitante recebe confirmação visual de que o envio deu certo |
-| 5 | Visitante que tenta acessar o painel sem estar autenticado é barrado e enviado para o login |
-| 6 | Admin faz login com credenciais válidas, chega no painel e consegue sair quando quiser (logout) |
-| 7 | Painel lista todos os registros, ordenados por data, com o status de cada um visível |
-| 8 | Painel tem filtro por status, busca por nome ou email e paginação (continua usável com centenas de registros) |
-| 9 | Admin confirma ou cancela um registro e vê o resultado na hora |
-| 10 | Admin cria, edita e desativa opções, e a página pública reflete a mudança |
-
-O item 5 é o que mais gente esquece de testar. Abra uma aba anônima e tente acessar o painel direto pela URL.
-
-### Interface
-
-- Design responsivo (mobile e desktop)
-- Status de cada registro visualmente identificável no painel (ex: badge colorida)
-- Ações do painel com feedback: depois do clique, dá para saber o que aconteceu
-
-#### Sobre CSS
-
-Use o que quiser: Tailwind (via CDN, uma linha no `<head>`), CSS puro, a biblioteca de componentes da sua stack, o que for. Só não gaste tempo configurando toolchain. Batalhar com build de CSS não é o que estamos avaliando, então escolha o caminho mais curto até o resultado visual.
-
-### Testes
-
-Não pedimos número de cobertura. Pedimos testes automatizados nos fluxos que não podem quebrar:
-
-- Criar um registro válido (e recusar um inválido)
-- O painel barrado sem autenticação
-- A mudança de status
-
-Se quiser testar mais, ótimo. Mas esses três já contam a história que queremos ler. No `DECISOES.md`, conte como você decidiu o que testar.
-
-### Qualidade de código
-
-- Código organizado e legível
-- Estrutura de projeto coerente com as convenções da stack escolhida
-- README com instruções claras
-
-## O que a especificação não diz
-
-Esta especificação deixa espaço em aberto de propósito, e cada tema cria as próprias perguntas. Dois exemplos que valem para qualquer tema:
-
-- Como fica o painel quando ainda não chegou nenhum registro?
-- O que acontece com os registros de uma opção que o admin desativou?
-
-Outras vão aparecer conforme o que você escolher construir. Você não precisa resolver tudo que encontrar. Precisa perceber que existe e registrar o que decidiu. Duas ou três linhas por item, no `DECISOES.md`, já valem nota cheia.
-
-## Além do mínimo
-
-Os requisitos acima são o piso. Entregar tudo que foi pedido, bem feito, já é uma boa entrega. O que faz a gente lembrar de você é o que vem além. E "além" aqui é algo pequeno, não é outro projeto.
-
-### 1. Escolha 2 ou 3 melhorias e faça bem feito
-
-Três coisas caprichadas valem mais que dez pela metade. Lista longa com acabamento zero conta contra, não a favor.
-
-### 2. Adicione pelo menos uma coisa que não pedimos
-
-Você é o desenvolvedor do produto. Olhe para a tela de quem vai gerenciar isso e pergunte: o que falta aqui para ser realmente usável na segunda-feira de manhã?
-
-Pode ser simples. Implemente e explique no PR por que aquilo importa.
-
-### 3. Diga o que você decidiu não fazer
-
-Liste no PR o que ficou de fora de propósito e o motivo. Saber cortar escopo vale tanto quanto saber implementar.
-
-<details>
-<summary><b>Sem ideias do que fazer a mais? (abra só se precisar)</b></summary>
-
-Coisas que costumam fazer sentido nesse tipo de sistema. Não é um checklist: se você só executar essa lista, o resultado é o de todo mundo.
-
-- Deploy em algum lugar acessível, com o link no README
-- Notificação por email ao criar ou confirmar um registro (pode ser simulada, com um Mailhog da vida)
-- Histórico de mudanças de status: o que mudou, quando
-- Resumo no painel: contadores e, se fizer sentido, um gráfico simples
-- Proteção contra spam ou envios duplicados no formulário
-- Docker ou docker-compose para subir tudo com um comando
-- CI rodando os testes a cada push
-- Exportação da listagem (CSV)
-- Acessibilidade básica: navegação por teclado, contraste, labels
-- Capricho visual: microinterações, dark mode, ilustrações com a cara do tema
-
-</details>
-
-## Critérios de avaliação
-
-Vale repetir o que já dissemos lá em cima: o que mais avaliamos é criatividade. No tema, na solução, nos detalhes que você escolhe cuidar. Os critérios abaixo existem para dar chão a isso.
-
-### O básico: o que esperamos ver de pé
-
-- Formulário salva o registro no banco, com validação nas duas pontas
-- Painel protegido por login lista os registros ordenados por data, com filtro, busca e paginação
-- Admin muda status e gerencia as opções pelo painel
-- Os testes dos fluxos centrais existem e passam
-- O projeto roda seguindo o seu próprio README, sem passo faltando
-
-Fechou esses cinco? Você fez o teste. O que vem abaixo é o que diferencia uma entrega da outra.
-
-Não fechou algum? Não é eliminatório. Conte no PR o que ficou faltando e por quê. O raciocínio conta.
-
-### Desempate: o que faz a gente lembrar de você
-
-| O que olhamos | Como aparece na prática |
-|---------------|--------------------------|
-| Criatividade | O tema, a solução e os detalhes têm a sua cara, não a cara de um tutorial |
-| Julgamento | Percebeu as ambiguidades da especificação e decidiu conscientemente |
-| Solidez | Casos de erro tratados, testes que testam de verdade, nada quebra no primeiro clique errado |
-| Escolha de ferramenta | A stack faz sentido para o problema e você sabe dizer por que escolheu |
-| Iniciativa | Adicionou algo que não pedimos e soube dizer por que importa |
-| Priorização | Cortou escopo de propósito e explicou o corte |
-| Domínio | Entende o que entregou e consegue conversar sobre o próprio código |
-| Cuidado | Página com a cara do tema, estados vazios tratados, responsivo testado no celular |
-| Comunicação | README claro, PR bem escrito, commits que contam a história do trabalho |
-
-Não avaliamos qual tema nem qual stack você escolheu. Avaliamos se as escolhas foram conscientes e se você domina o que escolheu.
-
-## Diretrizes criativas
-
-### Página pública
-
-Liberdade criativa total: escolha qualquer tema em que uma pessoa envia uma solicitação e um admin gerencia, real ou fictício.
-
-Alguns exemplos, só para destravar:
-
-- Barbearia ou salão: agendamento de horário
-- Clínica (médica, odontológica, fisioterapia...): agendamento de consulta
-- Curso, workshop ou aula experimental: inscrição
-- Assistência técnica ou marcenaria: pedido de orçamento
-- Restaurante ou espaço de eventos: reserva
-- ONG de animais: pedido de adoção
-- Estúdio fotográfico: agendamento de ensaio
-- Ou qualquer outra combinação que você inventar
-
-A estrutura da página é livre. Poucas seções bem feitas valem mais que muitas espremidas, e não precisa ser uma landing page de agência.
-
-### Painel de gestão
-
-Um painel próprio para gerenciar os registros e as opções, com acesso controlado por autenticação.
-
-#### O fluxo que precisa funcionar
-
-1. Visitante acessa a rota do painel
-2. Como não está autenticado, é redirecionado para a tela de login
-3. Admin faz login com credenciais válidas
-4. É levado ao painel
-5. Vê os registros ordenados por data, filtra por status, busca por nome ou email, navega pelas páginas
-6. Confirma ou cancela registros
-7. Gerencia as opções oferecidas
-8. Consegue sair da sessão quando quiser
-
-#### O que você precisa montar
-
-| Peça | O que faz |
-|------|-----------|
-| Usuário admin | Um usuário com acesso ao painel. Documente no README como criá-lo |
-| Tela de login | Formulário de autenticação. Pode ser simples, não avaliamos o design dela |
-| Proteção da rota | Sem sessão válida, o painel não abre. Nem pela URL direta |
-| Logout | Um jeito de encerrar a sessão |
-| Listagem | Os campos do registro, com status visível, ordenados por data, com filtro, busca e paginação. Aqui vale caprichar |
-| Ações de status | Confirmar e cancelar, com feedback do que aconteceu |
-| Gestão de opções | Criar, editar e desativar as opções que a página pública oferece |
-
-Use a autenticação pronta da sua stack. Reinventar login do zero não impressiona ninguém. O que queremos ver é você sabendo usar e explicar a que já existe.
-
-## Rodando o projeto
-
-Como o seu projeto sobe depende da stack que você escolheu, então quem escreve essa parte é você, no README do seu repositório.
-
-O critério é simples, e a gente vai testar de verdade: uma pessoa que nunca viu seu projeto consegue clonar, seguir o seu README e ver a aplicação funcionando no navegador?
-
-Na prática, isso costuma significar cobrir:
-
-- Pré-requisitos (versão de linguagem, runtime, banco de dados...)
-- Instalação das dependências
-- Variáveis de ambiente, se houver (inclua um `.env.example`)
-- Preparo do banco (migrations, seed...)
-- Como criar o usuário admin
-- Como subir a aplicação e em qual endereço ela responde
-- Como rodar os testes
-
-O passo do usuário admin é o que mais falta nas entregas. Se a gente não conseguir entrar no painel, metade do teste fica invisível. Vale testar seu próprio README numa pasta limpa antes de enviar.
-
-## Notas importantes
-
-- Funcionar é pré-requisito. O diferencial é o cuidado e as decisões
-- Se a lista parecer grande, corte, e conte no PR o que cortou e por quê
-- Queremos ver o processo: commits incrementais com mensagens que fazem sentido valem mais que um único commit "projeto final"
-- Documentação, Stack Overflow, IA: tudo liberado. Veja a seção sobre IA abaixo
-- Simples e bem feito é melhor que complexo e quebrado
-
-## E se não der tempo de fazer tudo?
-
-Está tudo bem. Sério.
-
-Entregue do jeito que estiver e conte no Pull Request:
-
-- O que você conseguiu fazer
-- Onde travou, e o que tentou antes de travar
-- O que faria diferente com mais tempo
-
-Avaliamos o que você fez, não o tamanho do que faltou. Um projeto com metade dos requisitos e um raciocínio claro por trás das escolhas vale mais, para nós, do que um projeto completo que o candidato não sabe explicar.
-
-E vale repetir, porque é o que mais importa: o que estamos avaliando é a forma como você pensa. Como você prioriza, o que percebe, como decide quando falta tempo ou informação. Isso aparece igualmente bem numa entrega parcial. Às vezes até melhor, porque é justamente ao priorizar que a cabeça de alguém fica visível.
-
-O único cenário ruim é não entregar. Se você chegou até aqui, abra o PR. 😊
-
-## Sobre o uso de IA
-
-Assumimos que você vai usar IA. Nós usamos. Não tem problema nenhum nisso.
-
-Mas isso muda o que estamos avaliando. Se a IA escreve o CRUD em 20 minutos, o CRUD não diz nada sobre você. O que diz é o que você faz depois: o que percebeu que faltava, o que recusou da sugestão dela, e o que decidiu por conta própria.
-
-### No seu `DECISOES.md`
-
-Além das decisões técnicas, inclua uma seção curta sobre IA respondendo:
-
-1. O que você delegou para a IA e o que fez à mão, e por quê
-2. Uma vez em que a IA te deu algo ruim ou errado: o que era, como você percebeu, e o que fez no lugar
-3. Uma decisão que você tomou contra a sugestão da IA, e o motivo
-
-A pergunta 2 é a que mais nos interessa. Quem usa IA de verdade sempre tem essa história. Quem só copia e cola, não tem.
-
-Três parágrafos curtos resolvem. Não precisa de mais que isso.
-
-### E depois, na conversa
-
-Vamos conversar sobre o que você construiu: por que fez de um jeito e não de outro, o que te deu trabalho, o que você mudaria. Não é sabatina. É a mesma conversa que temos entre a gente quando alguém abre um PR.
-
-Por isso vale entregar código que você entende. Não porque vamos cobrar linha por linha, mas porque essa conversa é a parte mais interessante do processo, e é onde você tem mais espaço para mostrar como pensa.
-
-Boa sorte! A gente se vê na conversa.
+O site está disponível em **Português** (padrão) e **Inglês**, com um botão de alternância no cabeçalho. A preferência de idioma é salva na sessão do navegador. Planos e setores criados pelo administrador aparecem no idioma original em que foram cadastrados (sem tradução automática), já que são conteúdo dinâmico definido por quem gerencia o sistema.
